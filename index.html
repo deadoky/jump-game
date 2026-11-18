@@ -64,11 +64,11 @@ function step(k) {
   if (over) return;
   p.vx = (keys.r - keys.l) * 6;
   p.x += p.vx * k; p.vy += GRAV * k; p.y += p.vy * k;
-  if (p.x > W) p.x = -S; if (p.x < -S) p.x = W; // wrap around edges
+  if (p.x >= W) p.x -= W; if (p.x < 0) p.x += W; // wrap by exactly W: the twin drawn at the other edge becomes the hero, no jump
   for (const pl of plats) {
     pl.x += pl.dx * k; if (pl.x < 0 || pl.x > W - 70) pl.dx *= -1;
     const feet = p.y + S;
-    if (p.vy > 0 && feet >= pl.y && feet - p.vy * k <= pl.y + 2 && p.x + S - 10 > pl.x && p.x + 10 < pl.x + 70) p.vy = JUMP;
+    if (p.vy > 0 && feet >= pl.y && feet - p.vy * k <= pl.y + 2 && [p.x, p.x - W].some(x => x + S - 10 > pl.x && x + 10 < pl.x + 70)) p.vy = JUMP;
   }
   if (p.y < H * 0.4) { // scroll world up
     const d = H * 0.4 - p.y; p.y += d; score += d;
@@ -81,7 +81,7 @@ function step(k) {
   for (const o of drops) {
     o.y += 4 * k; o.a += o.va * k;
     // shortcut: round hitbox, ignores the sprite's tall shape; switch to a rotated box if hits feel unfair
-    if (Math.hypot(o.x - (p.x + S/2), o.y - (p.y + S/2)) < S/2 + 18) over = 'hit';
+    if ([p.x, p.x - W].some(x => Math.hypot(o.x - (x + S/2), o.y - (p.y + S/2)) < S/2 + 18)) over = 'hit';
   }
   drops = drops.filter(o => o.y < H + 80);
   if (p.y > H) over = true; if (over) { if (score > best) { best = score; try { localStorage.setItem('best', Math.floor(best)) } catch {} } sendScore(score) }
@@ -99,7 +99,7 @@ function draw() {
     const h = 90, w = h * bong.width / bong.height;
     g.save(); g.translate(o.x, o.y); g.rotate(o.a); g.drawImage(bong, -w/2, -h/2, w, h); g.restore();
   }
-  for (const dx of [0, p.x > W - S ? -W : p.x < 0 ? W : null]) { // draw a twin while crossing the edge
+  for (const dx of [0, p.x > W - S ? -W : null]) { // draw a twin while crossing the edge
     if (dx === null) continue;
     g.save(); g.beginPath(); g.arc(p.x + dx + S/2, p.y + S/2, S/2, 0, Math.PI * 2); g.clip();
     if (face.complete) g.drawImage(face, p.x + dx, p.y, S, S);
